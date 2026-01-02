@@ -1,0 +1,7 @@
+#!/bin/bash
+
+source HOST
+
+curl -X POST $SERVER/del_user \
+	-H "Content-Type: application/json" \
+	-d "{\"id\": \"$1\", \"token\": \"$TOKEN\"}" | jq

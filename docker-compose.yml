@@ -1,0 +1,20 @@
+services:
+  xray:
+    image: teddysun/xray
+    container_name: xray-server
+    network_mode: host
+    volumes:
+      - ./config.json:/etc/xray/config.json
+    restart: unless-stopped
+
+  api:
+    build:
+      dockerfile: api.dockerfile
+      env_file:
+        - .env
+    network_mode: host
+    volumes:
+      - ./config.json:/app/config.json
+      - ./sub.txt:/app/sub.txt
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped

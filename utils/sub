@@ -1,0 +1,6 @@
+#!/bin/bash
+
+source HOST
+
+curl -X GET $SERVER/sub/$1 \
+	-H "Content-Type: application/json"

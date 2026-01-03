@@ -18,6 +18,7 @@ CONFIG_FILE = get_var("CONFIG_FILE")
 SUB_FILE = get_var("SUB_FILE")
 TOKEN = get_var("TOKEN")
 PORT = get_var("PORT")
+TITLE = os.getenv("TITLE") or "Xray Pult"
 
 XRAY_NAME = 'xray-server'
 
@@ -125,8 +126,18 @@ def sub(idx):
             ctx = s.read()
     
         ctx = ctx.replace("$CLIENT$", idx)
-        string_bytes = ctx.encode("utf-8")
-        return base64.b64encode(string_bytes).decode()
+        sub_bytes = ctx.encode("utf-8")
+        sub = base64.b64encode(data_bytes).decode()
+
+        title = base64.base64encode(
+                TITLE.encode("utf-8")
+        ).decode()
+
+        response = app.make_response(sub)
+                
+        response.headers['profile-title'] = f'base64:{title}'
+
+        return response
     except Exception as e:
         return jsonify({"error": f"Internal server error: {str(e)}"}), 500
 

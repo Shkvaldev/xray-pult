@@ -129,7 +129,7 @@ def sub(idx):
         sub_bytes = ctx.encode("utf-8")
         sub = base64.b64encode(sub_bytes).decode()
 
-        title = base64.base64encode(
+        title = base64.b64encode(
                 TITLE.encode("utf-8")
         ).decode()
 

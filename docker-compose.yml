@@ -10,8 +10,8 @@ services:
   api:
     build:
       dockerfile: api.dockerfile
-      env_file:
-        - .env
+    env_file:
+      - .env
     network_mode: host
     volumes:
       - ./config.json:/app/config.json

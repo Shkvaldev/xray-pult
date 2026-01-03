@@ -2,6 +2,7 @@ import os
 import json
 import base64
 import docker
+
 from flask import Flask, request, jsonify
 
 
@@ -114,7 +115,7 @@ def del_user():
     except Exception as e:
         return jsonify({"error": f"Internal server error: {str(e)}"}), 500
 
-@app.route('/sub/<str:idx>', methods=['GET'])
+@app.route('/sub/<idx>', methods=['GET'])
 def sub(idx):
     """Generates subscription for user"""
     # TODO: implement checking and some kimd of security

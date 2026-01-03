@@ -9,7 +9,8 @@ from flask import Flask, request, jsonify
 def get_var(name):
     var = os.getenv(name)
     if not var:
-        raise ValueEror(f"You didn't provide env var `{name}`")
+        raise ValueError(f"You didn't provide env var `{name}`")
+    return var
 
 docker_client = docker.from_env()
 

@@ -1,10 +1,8 @@
 import os
 import json
-import base64
 import docker
-
+import base64
 from flask import Flask, request, jsonify
-
 
 def get_var(name):
     var = os.getenv(name)
@@ -47,25 +45,50 @@ def add_user():
         with open(CONFIG_FILE, 'r') as f:
             config = json.load(f)
         
-        for client in config['inbounds'][0]['settings']['clients']:
-            if client["id"] == user_id:
-                return jsonify({"error": "User ID already exists"}), 400
-
-        config['inbounds'][0]['settings']['clients'].append({
-            "id": user_id,
-            "flow": ""
-        })
+        # Check if user exists in any inbound
+        user_exists = False
+        for inbound in config.get('inbounds', []):
+            if 'settings' in inbound and 'clients' in inbound['settings']:
+                for client in inbound['settings']['clients']:
+                    if client.get("id") == user_id:
+                        user_exists = True
+                        break
+                if user_exists:
+                    break
         
+        if user_exists:
+            return jsonify({"error": "User ID already exists"}), 400
+
+        # Add user to all inbounds that have a clients setting
+        for inbound in config.get('inbounds', []):
+            if 'settings' in inbound and 'clients' in inbound['settings']:
+                inbound['settings']['clients'].append({
+                    "id": user_id,
+                    "flow": ""
+                })
+
         with open(CONFIG_FILE, 'w') as f:
             json.dump(config, f, indent=2)
         
         xray_container = docker_client.containers.get(XRAY_NAME)
         xray_container.restart()
 
+        # Calculate total users across all inbounds
+        total_users = 0
+        all_users = []
+        for inbound in config.get('inbounds', []):
+            if 'settings' in inbound and 'clients' in inbound['settings']:
+                clients = inbound['settings']['clients']
+                total_users += len(clients)
+                all_users.extend([client["id"] for client in clients])
+        
+        # Remove duplicates if needed (if same user added to multiple inbounds with different flows)
+        all_users = list(set(all_users))
+
         return jsonify({
-            "message": f"User '{user_id}' added successfully",
-            "total_users": len(config['inbounds'][0]['settings']['clients']),
-            "all_users": [client["id"] for client in config['inbounds'][0]['settings']['clients']],
+            "message": f"User '{user_id}' added successfully to all inbounds",
+            "total_users": total_users,
+            "all_users": all_users,
         }), 201
         
     except json.JSONDecodeError:
@@ -96,20 +119,42 @@ def del_user():
         with open(CONFIG_FILE, 'r') as f:
             config = json.load(f)
         
-        for client in config['inbounds'][0]['settings']['clients']:
-            if client["id"] == user_id:
-                config['inbounds'][0]['settings']['clients'].remove(client)
+        # Remove user from all inbounds
+        removed_count = 0  # Track how many times user was removed
+        for inbound in config.get('inbounds', []):
+            if 'settings' in inbound and 'clients' in inbound['settings']:
+                clients = inbound['settings']['clients']
+                # Use list comprehension to filter out the user
+                initial_len = len(clients)
+                inbound['settings']['clients'] = [
+                    client for client in clients if client.get("id") != user_id
+                ]
+                removed_count += initial_len - len(inbound['settings']['clients'])
         
+        if removed_count == 0:
+            return jsonify({"error": "User ID not found"}), 404
+
         with open(CONFIG_FILE, 'w') as f:
             json.dump(config, f, indent=2)
         
         xray_container = docker_client.containers.get(XRAY_NAME) 
         xray_container.restart()
 
+        # Calculate remaining users
+        total_users = 0
+        all_users = []
+        for inbound in config.get('inbounds', []):
+            if 'settings' in inbound and 'clients' in inbound['settings']:
+                clients = inbound['settings']['clients']
+                total_users += len(clients)
+                all_users.extend([client["id"] for client in clients])
+        
+        all_users = list(set(all_users))  # Remove duplicates
+
         return jsonify({
-            "message": f"User '{user_id}' removed successfully",
-            "total_users": len(config['inbounds'][0]['settings']['clients']),
-            "all_users": [client["id"] for client in config['inbounds'][0]['settings']['clients']],
+            "message": f"User '{user_id}' removed successfully from {removed_count} inbounds",
+            "total_users": total_users,
+            "all_users": all_users,
         }), 201
         
     except json.JSONDecodeError:
